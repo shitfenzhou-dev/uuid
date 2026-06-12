@@ -1,0 +1,12 @@
+diff --git a/src/UuidFactory.php b/src/UuidFactory.php
+index c7607a1..fcd1d05 100644
+--- a/src/UuidFactory.php
++++ b/src/UuidFactory.php
+@@ -200,6 +200,7 @@ class UuidFactory implements UuidFactoryInterface
+         $this->isDefaultFeatureSet = false;
+ 
+         $this->randomGenerator = $generator;
++        $this->unixTimeGenerator = new UnixTimeGenerator($generator);
+     }
+ 
+     /**
