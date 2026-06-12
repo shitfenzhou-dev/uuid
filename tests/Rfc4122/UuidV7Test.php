@@ -129,4 +129,98 @@ class UuidV7Test extends TestCase
 
         $uuid->getDateTime();
     }
+
+    /**
+     * @dataProvider provideIsBetween
+     */
+    public function testIsBetween(
+        DateTimeImmutable $uuidTime,
+        DateTimeImmutable $start,
+        DateTimeImmutable $end,
+        bool $expected,
+    ): void {
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($uuidTime);
+
+        $this->assertSame($expected, $uuid->isBetween($start, $end));
+    }
+
+    /**
+     * @return iterable<string, array{uuidTime: DateTimeImmutable, start: DateTimeImmutable, end: DateTimeImmutable, expected: bool}>
+     */
+    public function provideIsBetween(): iterable
+    {
+        $uuidTime = DateTimeImmutable::createFromFormat('U.u', '1700000000.123456');
+        $beforeWindow = DateTimeImmutable::createFromFormat('U.u', '1699999999.000000');
+        $justBeforeWindow = DateTimeImmutable::createFromFormat('U.u', '1700000000.122999');
+        $exactStart = DateTimeImmutable::createFromFormat('U.u', '1700000000.123000');
+        $insideStart = DateTimeImmutable::createFromFormat('U.u', '1700000000.120000');
+        $insideEnd = DateTimeImmutable::createFromFormat('U.u', '1700000000.125000');
+        $exactEndTruncated = DateTimeImmutable::createFromFormat('U.u', '1700000000.123000');
+        $justAfterWindow = DateTimeImmutable::createFromFormat('U.u', '1700000000.124000');
+        $afterWindow = DateTimeImmutable::createFromFormat('U.u', '1700000001.000000');
+
+        yield 'uuid falls strictly inside the window' => [
+            'uuidTime' => $uuidTime,
+            'start' => $insideStart,
+            'end' => $insideEnd,
+            'expected' => true,
+        ];
+
+        yield 'uuid timestamp equals start (inclusive)' => [
+            'uuidTime' => $uuidTime,
+            'start' => $exactStart,
+            'end' => $insideEnd,
+            'expected' => true,
+        ];
+
+        yield 'uuid timestamp equals end (inclusive)' => [
+            'uuidTime' => $uuidTime,
+            'start' => $beforeWindow,
+            'end' => $exactEndTruncated,
+            'expected' => true,
+        ];
+
+        yield 'uuid timestamp falls before the window' => [
+            'uuidTime' => $uuidTime,
+            'start' => $justAfterWindow,
+            'end' => $afterWindow,
+            'expected' => false,
+        ];
+
+        yield 'uuid timestamp falls after the window' => [
+            'uuidTime' => $uuidTime,
+            'start' => $beforeWindow,
+            'end' => $justBeforeWindow,
+            'expected' => false,
+        ];
+
+        yield 'sub-millisecond precision on boundaries is truncated (123999 us == 123 ms)' => [
+            'uuidTime' => $uuidTime,
+            'start' => DateTimeImmutable::createFromFormat('U.u', '1700000000.123999'),
+            'end' => DateTimeImmutable::createFromFormat('U.u', '1700000000.123999'),
+            'expected' => true,
+        ];
+
+        yield 'start strictly greater than end throws' => [
+            'uuidTime' => $uuidTime,
+            'start' => DateTimeImmutable::createFromFormat('U.u', '1700000001.000000'),
+            'end' => DateTimeImmutable::createFromFormat('U.u', '1700000000.000000'),
+            'expected' => false, // never reached; the exception is asserted separately.
+        ];
+    }
+
+    public function testIsBetweenThrowsWhenStartIsAfterEnd(): void
+    {
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7(DateTimeImmutable::createFromFormat('U.u', '1700000000.123456'));
+
+        $start = DateTimeImmutable::createFromFormat('U.u', '1700000001.000000');
+        $end = DateTimeImmutable::createFromFormat('U.u', '1700000000.000000');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('start must be before or equal to end');
+
+        $uuid->isBetween($start, $end);
+    }
 }
