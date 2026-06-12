@@ -109,6 +109,67 @@ class UuidV7Test extends TestCase
         ];
     }
 
+    public function testIsBetweenReturnsTrueWhenTimestampFallsWithinWindow(): void
+    {
+        $dateTime = new DateTimeImmutable('2022-09-14T22:44:33.123456+00:00');
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($dateTime);
+
+        $start = new DateTimeImmutable('2022-09-14T22:44:33.123000+00:00');
+        $end = new DateTimeImmutable('2022-09-14T22:44:33.123999+00:00');
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenTimestampEqualsStart(): void
+    {
+        $dateTime = new DateTimeImmutable('2022-09-14T22:44:34.456789+00:00');
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($dateTime);
+
+        $end = new DateTimeImmutable('2022-09-14T22:44:34.457000+00:00');
+
+        $this->assertTrue($uuid->isBetween($dateTime, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenTimestampEqualsEnd(): void
+    {
+        $dateTime = new DateTimeImmutable('2022-09-14T22:44:35.789123+00:00');
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($dateTime);
+
+        $start = new DateTimeImmutable('2022-09-14T22:44:35.788000+00:00');
+
+        $this->assertTrue($uuid->isBetween($start, $dateTime));
+    }
+
+    public function testIsBetweenReturnsFalseWhenTimestampFallsOutsideWindow(): void
+    {
+        $dateTime = new DateTimeImmutable('2022-09-14T22:44:36.111222+00:00');
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($dateTime);
+
+        $start = new DateTimeImmutable('2022-09-14T22:44:36.112000+00:00');
+        $end = new DateTimeImmutable('2022-09-14T22:44:36.112999+00:00');
+
+        $this->assertFalse($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenThrowsExceptionWhenStartIsAfterEnd(): void
+    {
+        $dateTime = new DateTimeImmutable('2022-09-14T22:44:37.222333+00:00');
+        /** @var UuidV7 $uuid */
+        $uuid = Uuid::uuid7($dateTime);
+
+        $start = new DateTimeImmutable('2022-09-14T22:44:38.000000+00:00');
+        $end = new DateTimeImmutable('2022-09-14T22:44:37.999999+00:00');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('start must be before or equal to end');
+
+        $uuid->isBetween($start, $end);
+    }
+
     public function testGetDateTimeThrowsException(): void
     {
         $fields = Mockery::mock(FieldsInterface::class, [

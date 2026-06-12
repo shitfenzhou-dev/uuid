@@ -14,12 +14,17 @@ declare(strict_types=1);
 
 namespace Ramsey\Uuid\Rfc4122;
 
+use DateTimeInterface;
 use Ramsey\Uuid\Codec\CodecInterface;
 use Ramsey\Uuid\Converter\NumberConverterInterface;
 use Ramsey\Uuid\Converter\TimeConverterInterface;
 use Ramsey\Uuid\Exception\InvalidArgumentException;
 use Ramsey\Uuid\Rfc4122\FieldsInterface as Rfc4122FieldsInterface;
 use Ramsey\Uuid\Uuid;
+
+use function str_pad;
+
+use const STR_PAD_LEFT;
 
 /**
  * Unix Epoch time, or version 7, UUIDs include a timestamp in milliseconds since the Unix Epoch, along with random bytes
@@ -54,5 +59,29 @@ final class UuidV7 extends Uuid implements UuidInterface
         }
 
         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+    }
+
+    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
+    {
+        $startTimestamp = $this->dateTimeToTimestamp($start);
+        $endTimestamp = $this->dateTimeToTimestamp($end);
+
+        if ($startTimestamp > $endTimestamp) {
+            throw new InvalidArgumentException('start must be before or equal to end');
+        }
+
+        $uuidTimestamp = str_pad($this->fields->getTimestamp()->toString(), 15, '0', STR_PAD_LEFT);
+
+        return $uuidTimestamp >= $startTimestamp && $uuidTimestamp <= $endTimestamp;
+    }
+
+    private function dateTimeToTimestamp(DateTimeInterface $dateTime): string
+    {
+        return str_pad(
+            $this->timeConverter->calculateTime($dateTime->format('U'), $dateTime->format('u'))->toString(),
+            15,
+            '0',
+            STR_PAD_LEFT,
+        );
     }
 }
