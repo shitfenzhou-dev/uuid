@@ -15,8 +15,6 @@ declare(strict_types=1);
 namespace Ramsey\Uuid\Lazy;
 
 use DateTimeInterface;
-use Ramsey\Uuid\Converter\NumberConverterInterface;
-use Ramsey\Uuid\Exception\UnsupportedOperationException;
 use Ramsey\Uuid\Fields\FieldsInterface;
 use Ramsey\Uuid\Rfc4122\UuidV1;
 use Ramsey\Uuid\Rfc4122\UuidV6;
@@ -26,7 +24,6 @@ use Ramsey\Uuid\UuidFactory;
 use Ramsey\Uuid\UuidInterface;
 use ValueError;
 
-use function assert;
 use function bin2hex;
 use function hex2bin;
 use function sprintf;
@@ -115,92 +112,158 @@ final class LazyUuidFromString implements UuidInterface
         $this->unserialize($data['string']);
     }
 
-    public function getNumberConverter(): NumberConverterInterface
+    /**
+     * @deprecated This method will be removed in 5.0.0. There is no alternative recommendation, so plan accordingly.
+     */
+    public function getNumberConverter()
     {
-        return ($this->unwrapped ?? $this->unwrap())->getNumberConverter();
+        return $this->unwrapped()->getNumberConverter();
     }
 
     /**
-     * @inheritDoc
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance.
+     *
+     * @return string[]
      */
     public function getFieldsHex(): array
     {
-        return ($this->unwrapped ?? $this->unwrap())->getFieldsHex();
+        return $this->unwrapped()->getFieldsHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getClockSeqHiAndReserved()}.
+     */
     public function getClockSeqHiAndReservedHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getClockSeqHiAndReservedHex();
+        return $this->unwrapped()->getClockSeqHiAndReservedHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getClockSeqLow()}.
+     */
     public function getClockSeqLowHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getClockSeqLowHex();
+        return $this->unwrapped()->getClockSeqLowHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getClockSeq()}.
+     */
     public function getClockSequenceHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getClockSequenceHex();
+        return $this->unwrapped()->getClockSequenceHex();
     }
 
+    /**
+     * @deprecated In ramsey/uuid version 5.0.0, this will be removed. It is available at {@see UuidV1::getDateTime()}.
+     */
     public function getDateTime(): DateTimeInterface
     {
-        return ($this->unwrapped ?? $this->unwrap())->getDateTime();
+        return $this->unwrapped()->getDateTime();
     }
 
+    /**
+     * @deprecated This method will be removed in 5.0.0. There is no direct alternative, but the same information may be
+     *     obtained by splitting in half the value returned by {@see UuidInterface::getHex()}.
+     */
     public function getLeastSignificantBitsHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getLeastSignificantBitsHex();
+        return $this->unwrapped()->getLeastSignificantBitsHex();
     }
 
+    /**
+     * @deprecated This method will be removed in 5.0.0. There is no direct alternative, but the same information may be
+     *     obtained by splitting in half the value returned by {@see UuidInterface::getHex()}.
+     */
     public function getMostSignificantBitsHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getMostSignificantBitsHex();
+        return $this->unwrapped()->getMostSignificantBitsHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getNode()}.
+     */
     public function getNodeHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getNodeHex();
+        return $this->unwrapped()->getNodeHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getTimeHiAndVersion()}.
+     */
     public function getTimeHiAndVersionHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getTimeHiAndVersionHex();
+        return $this->unwrapped()->getTimeHiAndVersionHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getTimeLow()}.
+     */
     public function getTimeLowHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getTimeLowHex();
+        return $this->unwrapped()->getTimeLowHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getTimeMid()}.
+     */
     public function getTimeMidHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getTimeMidHex();
+        return $this->unwrapped()->getTimeMidHex();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getTimestamp()}.
+     */
     public function getTimestampHex(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getTimestampHex();
+        return $this->unwrapped()->getTimestampHex();
     }
 
     public function getUrn(): string
     {
-        return ($this->unwrapped ?? $this->unwrap())->getUrn();
+        return $this->unwrapped()->getUrn();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getVariant()}.
+     */
     public function getVariant(): ?int
     {
-        return ($this->unwrapped ?? $this->unwrap())->getVariant();
+        return $this->unwrapped()->getVariant();
     }
 
+    /**
+     * @deprecated Use {@see UuidInterface::getFields()} to get a {@see FieldsInterface} instance. If it is a
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface} instance, you may call
+     *     {@see \Ramsey\Uuid\Rfc4122\FieldsInterface::getVersion()}.
+     */
     public function getVersion(): ?int
     {
-        return ($this->unwrapped ?? $this->unwrap())->getVersion();
+        return $this->unwrapped()->getVersion();
     }
 
     public function compareTo(UuidInterface $other): int
     {
-        return ($this->unwrapped ?? $this->unwrap())->compareTo($other);
+        return $this->unwrapped()->compareTo($other);
     }
 
     public function equals(?object $other): bool
@@ -223,17 +286,17 @@ final class LazyUuidFromString implements UuidInterface
 
     public function getFields(): FieldsInterface
     {
-        return ($this->unwrapped ?? $this->unwrap())->getFields();
+        return $this->unwrapped()->getFields();
     }
 
     public function getHex(): Hexadecimal
     {
-        return ($this->unwrapped ?? $this->unwrap())->getHex();
+        return $this->unwrapped()->getHex();
     }
 
     public function getInteger(): IntegerObject
     {
-        return ($this->unwrapped ?? $this->unwrap())->getInteger();
+        return $this->unwrapped()->getInteger();
     }
 
     public function toString(): string
@@ -258,12 +321,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getClockSeqHiAndReserved(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getClockSeqHiAndReserved()->toString());
+        return $this->unwrapped()->getClockSeqHiAndReserved();
     }
 
     /**
@@ -273,12 +331,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getClockSeqLow(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getClockSeqLow()->toString());
+        return $this->unwrapped()->getClockSeqLow();
     }
 
     /**
@@ -288,12 +341,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getClockSequence(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getClockSeq()->toString());
+        return $this->unwrapped()->getClockSequence();
     }
 
     /**
@@ -302,9 +350,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getLeastSignificantBits(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        return $instance->getNumberConverter()->fromHex(substr($instance->getHex()->toString(), 16));
+        return $this->unwrapped()->getLeastSignificantBits();
     }
 
     /**
@@ -313,9 +359,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getMostSignificantBits(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        return $instance->getNumberConverter()->fromHex(substr($instance->getHex()->toString(), 0, 16));
+        return $this->unwrapped()->getMostSignificantBits();
     }
 
     /**
@@ -325,12 +369,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getNode(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getNode()->toString());
+        return $this->unwrapped()->getNode();
     }
 
     /**
@@ -340,12 +379,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getTimeHiAndVersion(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getTimeHiAndVersion()->toString());
+        return $this->unwrapped()->getTimeHiAndVersion();
     }
 
     /**
@@ -355,12 +389,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getTimeLow(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getTimeLow()->toString());
+        return $this->unwrapped()->getTimeLow();
     }
 
     /**
@@ -370,12 +399,7 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getTimeMid(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        return $instance->getNumberConverter()->fromHex($fields->getTimeMid()->toString());
+        return $this->unwrapped()->getTimeMid();
     }
 
     /**
@@ -385,42 +409,33 @@ final class LazyUuidFromString implements UuidInterface
      */
     public function getTimestamp(): string
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        $fields = $instance->getFields();
-        assert($fields instanceof \Ramsey\Uuid\Rfc4122\FieldsInterface);
-
-        if ($fields->getVersion() !== 1) {
-            throw new UnsupportedOperationException('Not a time-based UUID');
-        }
-
-        return $instance->getNumberConverter()->fromHex($fields->getTimestamp()->toString());
+        return $this->unwrapped()->getTimestamp();
     }
 
     public function toUuidV1(): UuidV1
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
+        $instance = $this->unwrapped();
 
         if ($instance instanceof UuidV1) {
             return $instance;
         }
-
-        assert($instance instanceof UuidV6);
 
         return $instance->toUuidV1();
     }
 
     public function toUuidV6(): UuidV6
     {
-        $instance = ($this->unwrapped ?? $this->unwrap());
-
-        assert($instance instanceof UuidV6);
-
-        return $instance;
+        return $this->unwrapped()->toUuidV6();
     }
 
-    private function unwrap(): UuidInterface
+    /**
+     * Returns the unwrapped real UUID instance. This method is the single entry point for any logic that needs
+     * full UUID behavior (fields, version/time, number converter, variant, comparison, conversion). Lazy fast-path
+     * methods (string/bytes/equals/jsonSerialize/serialize) MUST NOT call this helper so the canonical string
+     * representation is enough and no UuidFactory is constructed prematurely.
+     */
+    private function unwrapped(): UuidInterface
     {
-        return $this->unwrapped = (new UuidFactory())->fromString($this->uuid);
+        return $this->unwrapped ?? $this->unwrapped = (new UuidFactory())->fromString($this->uuid);
     }
 }
