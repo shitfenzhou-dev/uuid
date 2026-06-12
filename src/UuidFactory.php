@@ -200,6 +200,7 @@ class UuidFactory implements UuidFactoryInterface
         $this->isDefaultFeatureSet = false;
 
         $this->randomGenerator = $generator;
+        $this->unixTimeGenerator = new UnixTimeGenerator($generator);
     }
 
     /**
