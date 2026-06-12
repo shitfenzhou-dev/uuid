@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Ramsey\Uuid\Rfc4122;
 
+use DateTimeInterface;
 use Ramsey\Uuid\Codec\CodecInterface;
 use Ramsey\Uuid\Converter\NumberConverterInterface;
 use Ramsey\Uuid\Converter\TimeConverterInterface;
@@ -54,5 +55,20 @@ final class UuidV7 extends Uuid implements UuidInterface
         }
 
         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+    }
+
+    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
+    {
+        $startMs = $start->getTimestamp() * 1000 + intdiv((int) $start->format('u'), 1000);
+        $endMs = $end->getTimestamp() * 1000 + intdiv((int) $end->format('u'), 1000);
+
+        if ($startMs > $endMs) {
+            throw new InvalidArgumentException('start must be before or equal to end');
+        }
+
+        $time = $this->timeConverter->convertTime($this->fields->getTimestamp());
+        $uuidMs = (int) $time->getSeconds()->toString() * 1000 + intdiv((int) $time->getMicroseconds()->toString(), 1000);
+
+        return $uuidMs >= $startMs && $uuidMs <= $endMs;
     }
 }

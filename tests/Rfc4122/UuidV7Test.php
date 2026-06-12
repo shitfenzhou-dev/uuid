@@ -129,4 +129,136 @@ class UuidV7Test extends TestCase
 
         $uuid->getDateTime();
     }
+
+    public function testIsBetweenReturnsTrueWhenTimestampWithinRange(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime->modify('-1 second');
+        $end = $uuidTime->modify('+1 second');
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenEqualToStart(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime;
+        $end = $uuidTime->modify('+1 second');
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenEqualToEnd(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime->modify('-1 second');
+        $end = $uuidTime;
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenStartEqualsEnd(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $this->assertTrue($uuid->isBetween($uuidTime, $uuidTime));
+    }
+
+    public function testIsBetweenReturnsFalseWhenBeforeStart(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime->modify('+1 second');
+        $end = $uuidTime->modify('+2 seconds');
+
+        $this->assertFalse($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsFalseWhenAfterEnd(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime->modify('-2 seconds');
+        $end = $uuidTime->modify('-1 second');
+
+        $this->assertFalse($uuid->isBetween($start, $end));
+    }
+
+    /**
+     * @param non-empty-string $uuid
+     * @param non-empty-string $startStr
+     * @param non-empty-string $endStr
+     *
+     * @dataProvider provideIsBetweenWithMicrosecondRounding
+     */
+    public function testIsBetweenProperlyHandlesMicrosecondRounding(
+        string $uuid,
+        string $startStr,
+        string $endStr,
+        bool $expected,
+    ): void {
+        /** @var UuidV7 $object */
+        $object = Uuid::fromString($uuid);
+
+        $start = new DateTimeImmutable('@' . $startStr);
+        $end = new DateTimeImmutable('@' . $endStr);
+
+        $this->assertSame($expected, $object->isBetween($start, $end));
+    }
+
+    /**
+     * @return array<array{uuid: non-empty-string, startStr: non-empty-string, endStr: non-empty-string, expected: bool}>
+     */
+    public function provideIsBetweenWithMicrosecondRounding(): array
+    {
+        return [
+            [
+                'uuid' => '00000000-0001-71b2-9669-00007ffffffe',
+                'startStr' => '0.000123',
+                'endStr' => '0.001500',
+                'expected' => true,
+            ],
+            [
+                'uuid' => '00000000-0001-71b2-9669-00007ffffffe',
+                'startStr' => '0.002000',
+                'endStr' => '0.003000',
+                'expected' => false,
+            ],
+            [
+                'uuid' => '00000000-03e7-71b2-9669-00007ffffffe',
+                'startStr' => '0.999000',
+                'endStr' => '1.000000',
+                'expected' => true,
+            ],
+            [
+                'uuid' => '00000000-03e7-71b2-9669-00007ffffffe',
+                'startStr' => '0.998123',
+                'endStr' => '0.998999',
+                'expected' => false,
+            ],
+        ];
+    }
+
+    public function testIsBetweenThrowsExceptionWhenStartAfterEnd(): void
+    {
+        $uuid = Uuid::uuid7();
+        $uuidTime = DateTimeImmutable::createFromInterface($uuid->getDateTime());
+
+        $start = $uuidTime->modify('+1 second');
+        $end = $uuidTime->modify('-1 second');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('start must be before or equal to end');
+
+        $uuid->isBetween($start, $end);
+    }
 }
