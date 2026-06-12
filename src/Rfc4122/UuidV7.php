@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace Ramsey\Uuid\Rfc4122;
 
+use DateTimeInterface;
 use Ramsey\Uuid\Codec\CodecInterface;
 use Ramsey\Uuid\Converter\NumberConverterInterface;
 use Ramsey\Uuid\Converter\TimeConverterInterface;
@@ -21,8 +22,10 @@ use Ramsey\Uuid\Exception\InvalidArgumentException;
 use Ramsey\Uuid\Rfc4122\FieldsInterface as Rfc4122FieldsInterface;
 use Ramsey\Uuid\Uuid;
 
+use function floor;
+
 /**
- * Unix Epoch time, or version 7, UUIDs include a timestamp in milliseconds since the Unix Epoch, along with random bytes
+ * Unix Epoch time, or version 7, UUIDs include a timestamp in milliseconds since the Unix Epoch
  *
  * @link https://www.rfc-editor.org/rfc/rfc9562#section-5.7 RFC 9562, 5.7. UUID Version 7
  *
@@ -54,5 +57,51 @@ final class UuidV7 extends Uuid implements UuidInterface
         }
 
         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+    }
+
+    /**
+     * Returns whether the UUID v7 timestamp falls within the given time window (inclusive)
+     *
+     * Comparison is performed at millisecond granularity; the microsecond portion of the provided
+     * DateTimeInterface instances is truncated to milliseconds to avoid false mismatches.
+     *
+     * @param DateTimeInterface $start The start of the time window (inclusive)
+     * @param DateTimeInterface $end The end of the time window (inclusive)
+     *
+     * @throws InvalidArgumentException if start is after end
+     */
+    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
+    {
+        if ($start > $end) {
+            throw new InvalidArgumentException('start must be before or equal to end');
+        }
+
+        $uuidMs = $this->getTimestampMilliseconds();
+        $startMs = self::toTimestampMilliseconds($start);
+        $endMs = self::toTimestampMilliseconds($end);
+
+        return $uuidMs >= $startMs && $uuidMs <= $endMs;
+    }
+
+    /**
+     * Returns the UUID v7 timestamp as milliseconds since the Unix Epoch
+     */
+    private function getTimestampMilliseconds(): int
+    {
+        $dateTime = $this->getDateTime();
+
+        return (int) floor(
+            (float) $dateTime->format('U') + (float) $dateTime->format('u') / 1_000_000 * 1_000
+        );
+    }
+
+    /**
+     * Converts a DateTimeInterface to milliseconds since the Unix Epoch, truncated to millisecond precision
+     */
+    private static function toTimestampMilliseconds(DateTimeInterface $dateTime): int
+    {
+        return (int) floor(
+            (float) $dateTime->format('U') + (float) $dateTime->format('u') / 1_000_000 * 1_000
+        );
     }
 }

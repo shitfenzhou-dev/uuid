@@ -1,0 +1,143 @@
+diff --git a/src/Rfc4122/UuidV7.php b/src/Rfc4122/UuidV7.php
+index 1f2f4b5..49dcb5d 100644
+--- a/src/Rfc4122/UuidV7.php
++++ b/src/Rfc4122/UuidV7.php
+@@ -14,6 +14,7 @@ declare(strict_types=1);
+ 
+ namespace Ramsey\Uuid\Rfc4122;
+ 
++use DateTimeInterface;
+ use Ramsey\Uuid\Codec\CodecInterface;
+ use Ramsey\Uuid\Converter\NumberConverterInterface;
+ use Ramsey\Uuid\Converter\TimeConverterInterface;
+@@ -21,8 +22,10 @@ use Ramsey\Uuid\Exception\InvalidArgumentException;
+ use Ramsey\Uuid\Rfc4122\FieldsInterface as Rfc4122FieldsInterface;
+ use Ramsey\Uuid\Uuid;
+ 
++use function floor;
++
+ /**
+- * Unix Epoch time, or version 7, UUIDs include a timestamp in milliseconds since the Unix Epoch, along with random bytes
++ * Unix Epoch time, or version 7, UUIDs include a timestamp in milliseconds since the Unix Epoch
+  *
+  * @link https://www.rfc-editor.org/rfc/rfc9562#section-5.7 RFC 9562, 5.7. UUID Version 7
+  *
+@@ -55,4 +58,50 @@ final class UuidV7 extends Uuid implements UuidInterface
+ 
+         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+     }
++
++    /**
++     * Returns whether the UUID v7 timestamp falls within the given time window (inclusive)
++     *
++     * Comparison is performed at millisecond granularity; the microsecond portion of the provided
++     * DateTimeInterface instances is truncated to milliseconds to avoid false mismatches.
++     *
++     * @param DateTimeInterface $start The start of the time window (inclusive)
++     * @param DateTimeInterface $end The end of the time window (inclusive)
++     *
++     * @throws InvalidArgumentException if start is after end
++     */
++    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
++    {
++        if ($start > $end) {
++            throw new InvalidArgumentException('start must be before or equal to end');
++        }
++
++        $uuidMs = $this->getTimestampMilliseconds();
++        $startMs = self::toTimestampMilliseconds($start);
++        $endMs = self::toTimestampMilliseconds($end);
++
++        return $uuidMs >= $startMs && $uuidMs <= $endMs;
++    }
++
++    /**
++     * Returns the UUID v7 timestamp as milliseconds since the Unix Epoch
++     */
++    private function getTimestampMilliseconds(): int
++    {
++        $dateTime = $this->getDateTime();
++
++        return (int) floor(
++            (float) $dateTime->format('U') + (float) $dateTime->format('u') / 1_000_000 * 1_000
++        );
++    }
++
++    /**
++     * Converts a DateTimeInterface to milliseconds since the Unix Epoch, truncated to millisecond precision
++     */
++    private static function toTimestampMilliseconds(DateTimeInterface $dateTime): int
++    {
++        return (int) floor(
++            (float) $dateTime->format('U') + (float) $dateTime->format('u') / 1_000_000 * 1_000
++        );
++    }
+ }
+diff --git a/tests/Rfc4122/UuidV7Test.php b/tests/Rfc4122/UuidV7Test.php
+index fd3e5a4..7b69b81 100644
+--- a/tests/Rfc4122/UuidV7Test.php
++++ b/tests/Rfc4122/UuidV7Test.php
+@@ -129,4 +129,63 @@ class UuidV7Test extends TestCase
+ 
+         $uuid->getDateTime();
+     }
++
++    public function testIsBetweenReturnsTrueWhenUuidTimestampIsWithinWindow(): void
++    {
++        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.500'));
++
++        $start = new DateTimeImmutable('2024-06-15 12:29:00.000');
++        $end = new DateTimeImmutable('2024-06-15 12:31:00.000');
++
++        $this->assertTrue($uuid->isBetween($start, $end));
++    }
++
++    public function testIsBetweenReturnsTrueWhenUuidTimestampEqualsStart(): void
++    {
++        $fixedTime = new DateTimeImmutable('2024-06-15 12:30:00.500');
++        $uuid = Uuid::uuid7($fixedTime);
++
++        $this->assertTrue($uuid->isBetween($fixedTime, new DateTimeImmutable('2024-06-15 12:31:00.000')));
++    }
++
++    public function testIsBetweenReturnsTrueWhenUuidTimestampEqualsEnd(): void
++    {
++        $fixedTime = new DateTimeImmutable('2024-06-15 12:30:00.500');
++        $uuid = Uuid::uuid7($fixedTime);
++
++        $this->assertTrue($uuid->isBetween(new DateTimeImmutable('2024-06-15 12:29:00.000'), $fixedTime));
++    }
++
++    public function testIsBetweenReturnsFalseWhenUuidTimestampIsOutsideWindow(): void
++    {
++        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.500'));
++
++        $start = new DateTimeImmutable('2024-06-15 12:31:00.000');
++        $end = new DateTimeImmutable('2024-06-15 12:32:00.000');
++
++        $this->assertFalse($uuid->isBetween($start, $end));
++    }
++
++    public function testIsBetweenThrowsExceptionWhenStartIsAfterEnd(): void
++    {
++        $uuid = Uuid::uuid7();
++
++        $start = new DateTimeImmutable('2024-06-15 12:31:00.000');
++        $end = new DateTimeImmutable('2024-06-15 12:30:00.000');
++
++        $this->expectException(InvalidArgumentException::class);
++        $this->expectExceptionMessage('start must be before or equal to end');
++
++        $uuid->isBetween($start, $end);
++    }
++
++    public function testIsBetweenHandlesMicrosecondTruncationCorrectly(): void
++    {
++        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.123'));
++
++        $start = new DateTimeImmutable('2024-06-15 12:30:00.122999');
++        $end = new DateTimeImmutable('2024-06-15 12:30:00.123999');
++
++        $this->assertTrue($uuid->isBetween($start, $end));
++    }
+ }

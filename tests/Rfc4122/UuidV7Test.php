@@ -129,4 +129,63 @@ class UuidV7Test extends TestCase
 
         $uuid->getDateTime();
     }
+
+    public function testIsBetweenReturnsTrueWhenUuidTimestampIsWithinWindow(): void
+    {
+        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.500'));
+
+        $start = new DateTimeImmutable('2024-06-15 12:29:00.000');
+        $end = new DateTimeImmutable('2024-06-15 12:31:00.000');
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenReturnsTrueWhenUuidTimestampEqualsStart(): void
+    {
+        $fixedTime = new DateTimeImmutable('2024-06-15 12:30:00.500');
+        $uuid = Uuid::uuid7($fixedTime);
+
+        $this->assertTrue($uuid->isBetween($fixedTime, new DateTimeImmutable('2024-06-15 12:31:00.000')));
+    }
+
+    public function testIsBetweenReturnsTrueWhenUuidTimestampEqualsEnd(): void
+    {
+        $fixedTime = new DateTimeImmutable('2024-06-15 12:30:00.500');
+        $uuid = Uuid::uuid7($fixedTime);
+
+        $this->assertTrue($uuid->isBetween(new DateTimeImmutable('2024-06-15 12:29:00.000'), $fixedTime));
+    }
+
+    public function testIsBetweenReturnsFalseWhenUuidTimestampIsOutsideWindow(): void
+    {
+        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.500'));
+
+        $start = new DateTimeImmutable('2024-06-15 12:31:00.000');
+        $end = new DateTimeImmutable('2024-06-15 12:32:00.000');
+
+        $this->assertFalse($uuid->isBetween($start, $end));
+    }
+
+    public function testIsBetweenThrowsExceptionWhenStartIsAfterEnd(): void
+    {
+        $uuid = Uuid::uuid7();
+
+        $start = new DateTimeImmutable('2024-06-15 12:31:00.000');
+        $end = new DateTimeImmutable('2024-06-15 12:30:00.000');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('start must be before or equal to end');
+
+        $uuid->isBetween($start, $end);
+    }
+
+    public function testIsBetweenHandlesMicrosecondTruncationCorrectly(): void
+    {
+        $uuid = Uuid::uuid7(new DateTimeImmutable('2024-06-15 12:30:00.123'));
+
+        $start = new DateTimeImmutable('2024-06-15 12:30:00.122999');
+        $end = new DateTimeImmutable('2024-06-15 12:30:00.123999');
+
+        $this->assertTrue($uuid->isBetween($start, $end));
+    }
 }
