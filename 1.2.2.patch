@@ -1,0 +1,166 @@
+diff --git a/src/Rfc4122/UuidV7.php b/src/Rfc4122/UuidV7.php
+index 1f2f4b5..5bc5be4 100644
+--- a/src/Rfc4122/UuidV7.php
++++ b/src/Rfc4122/UuidV7.php
+@@ -14,6 +14,8 @@ declare(strict_types=1);
+ 
+ namespace Ramsey\Uuid\Rfc4122;
+ 
++use DateTimeImmutable;
++use DateTimeInterface;
+ use Ramsey\Uuid\Codec\CodecInterface;
+ use Ramsey\Uuid\Converter\NumberConverterInterface;
+ use Ramsey\Uuid\Converter\TimeConverterInterface;
+@@ -55,4 +57,37 @@ final class UuidV7 extends Uuid implements UuidInterface
+ 
+         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+     }
++
++    /**
++     * Returns true if the UUID's timestamp is between the provided start and end times (inclusive)
++     *
++     * @param DateTimeInterface $start The start time
++     * @param DateTimeInterface $end The end time
++     *
++     * @return bool True if the UUID's timestamp is between $start and $end
++     *
++     * @throws InvalidArgumentException if $start is greater than $end
++     */
++    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
++    {
++        if ($start > $end) {
++            throw new InvalidArgumentException('start must be before or equal to end');
++        }
++
++        /** @var DateTimeImmutable $startMsDate */
++        $startMsDate = DateTimeImmutable::createFromFormat(
++            'U.u',
++            $start->format('U') . '.' . sprintf('%03d000', (int) ($start->format('u') / 1000))
++        );
++
++        /** @var DateTimeImmutable $endMsDate */
++        $endMsDate = DateTimeImmutable::createFromFormat(
++            'U.u',
++            $end->format('U') . '.' . sprintf('%03d000', (int) ($end->format('u') / 1000))
++        );
++
++        $uuidDate = $this->getDateTime();
++
++        return $uuidDate >= $startMsDate && $uuidDate <= $endMsDate;
++    }
+ }
+diff --git a/tests/Rfc4122/UuidV7Test.php b/tests/Rfc4122/UuidV7Test.php
+index fd3e5a4..af70224 100644
+--- a/tests/Rfc4122/UuidV7Test.php
++++ b/tests/Rfc4122/UuidV7Test.php
+@@ -129,4 +129,110 @@ class UuidV7Test extends TestCase
+ 
+         $uuid->getDateTime();
+     }
++
++    public function testIsBetweenThrowsExceptionWhenStartIsGreaterThanEnd(): void
++    {
++        /** @var UuidV7 $uuid */
++        $uuid = Uuid::fromString('01851e59-a5e0-71a2-9721-361c77846ba8'); // Just a valid v7 UUID
++
++        $start = new DateTimeImmutable('2023-01-01 10:00:01.000');
++        $end = new DateTimeImmutable('2023-01-01 10:00:00.000');
++
++        $this->expectException(InvalidArgumentException::class);
++        $this->expectExceptionMessage('start must be before or equal to end');
++
++        $uuid->isBetween($start, $end);
++    }
++
++    /**
++     * @dataProvider provideIsBetweenCases
++     */
++    public function testIsBetween(
++        string $uuidStr,
++        string $startStr,
++        string $endStr,
++        bool $expected
++    ): void {
++        /** @var UuidV7 $uuid */
++        $uuid = Uuid::fromString($uuidStr);
++
++        $start = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $startStr, new \DateTimeZone('UTC'));
++        $end = DateTimeImmutable::createFromFormat('Y-m-d H:i:s.u', $endStr, new \DateTimeZone('UTC'));
++
++        // $start and $end shouldn't be false here
++        $this->assertInstanceOf(DateTimeImmutable::class, $start);
++        $this->assertInstanceOf(DateTimeImmutable::class, $end);
++
++        $this->assertSame($expected, $uuid->isBetween($start, $end));
++    }
++
++    /**
++     * @return array<string, array{uuidStr: string, startStr: string, endStr: string, expected: bool}>
++     */
++    public function provideIsBetweenCases(): array
++    {
++        // 01851e59-a5e0-71a2-9721-361c77846ba8 corresponds to Unix epoch 1671234567890 ms (approx)
++        // Let's pick a known UUID v7 and its exact time.
++        // uuid = 00000000-0064-71b2-9669-00007ffffffe
++        // From provideUuidV7WithMicroseconds(), this is 100 milliseconds since epoch (0.100000).
++        // 100 ms is 1970-01-01 00:00:00.100000
++        
++        $uuid = '00000000-0064-71b2-9669-00007ffffffe';
++        
++        return [
++            'exactly equal to start and end' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.100000',
++                'endStr' => '1970-01-01 00:00:00.100000',
++                'expected' => true,
++            ],
++            'falls inside window' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.099000',
++                'endStr' => '1970-01-01 00:00:00.101000',
++                'expected' => true,
++            ],
++            'exactly equal to start' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.100000',
++                'endStr' => '1970-01-01 00:00:00.105000',
++                'expected' => true,
++            ],
++            'exactly equal to end' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.090000',
++                'endStr' => '1970-01-01 00:00:00.100000',
++                'expected' => true,
++            ],
++            'outside window (before)' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.101000',
++                'endStr' => '1970-01-01 00:00:00.200000',
++                'expected' => false,
++            ],
++            'outside window (after)' => [
++                'uuidStr' => $uuid,
++                'startStr' => '1970-01-01 00:00:00.050000',
++                'endStr' => '1970-01-01 00:00:00.099000',
++                'expected' => false,
++            ],
++            'truncates start microsecond up correctly (123999 -> 123000)' => [
++                'uuidStr' => $uuid,
++                // The UUID time is .100000. 
++                // If start is .100999, it truncates to .100000, so it becomes equal to start.
++                'startStr' => '1970-01-01 00:00:00.100999',
++                'endStr' => '1970-01-01 00:00:00.200000',
++                'expected' => true,
++            ],
++            'truncates end microsecond correctly (099999 -> 099000)' => [
++                'uuidStr' => $uuid,
++                // The UUID time is .100000.
++                // If end is .099999, it truncates to .099000.
++                // So UUID (.100000) is > end (.099000). Expected false.
++                'startStr' => '1970-01-01 00:00:00.050000',
++                'endStr' => '1970-01-01 00:00:00.099999',
++                'expected' => false,
++            ],
++        ];
++    }
+ }

@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 namespace Ramsey\Uuid\Rfc4122;
 
+use DateTimeImmutable;
+use DateTimeInterface;
 use Ramsey\Uuid\Codec\CodecInterface;
 use Ramsey\Uuid\Converter\NumberConverterInterface;
 use Ramsey\Uuid\Converter\TimeConverterInterface;
@@ -54,5 +56,38 @@ final class UuidV7 extends Uuid implements UuidInterface
         }
 
         parent::__construct($fields, $numberConverter, $codec, $timeConverter);
+    }
+
+    /**
+     * Returns true if the UUID's timestamp is between the provided start and end times (inclusive)
+     *
+     * @param DateTimeInterface $start The start time
+     * @param DateTimeInterface $end The end time
+     *
+     * @return bool True if the UUID's timestamp is between $start and $end
+     *
+     * @throws InvalidArgumentException if $start is greater than $end
+     */
+    public function isBetween(DateTimeInterface $start, DateTimeInterface $end): bool
+    {
+        if ($start > $end) {
+            throw new InvalidArgumentException('start must be before or equal to end');
+        }
+
+        /** @var DateTimeImmutable $startMsDate */
+        $startMsDate = DateTimeImmutable::createFromFormat(
+            'U.u',
+            $start->format('U') . '.' . sprintf('%03d000', (int) ($start->format('u') / 1000))
+        );
+
+        /** @var DateTimeImmutable $endMsDate */
+        $endMsDate = DateTimeImmutable::createFromFormat(
+            'U.u',
+            $end->format('U') . '.' . sprintf('%03d000', (int) ($end->format('u') / 1000))
+        );
+
+        $uuidDate = $this->getDateTime();
+
+        return $uuidDate >= $startMsDate && $uuidDate <= $endMsDate;
     }
 }
